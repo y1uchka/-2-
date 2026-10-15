@@ -1,122 +1,212 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import './App.css'
+import { useState, useContext } from 'react';
+import { AppProvider, AppContext } from './AppContext';
+import './index.css';
 
-function App() {
-  const [count, setCount] = useState(0)
-
+function TaskFlow() {
+  const { theme, toggleTheme, actionCount, addAction } = useContext(AppContext);
+  // список задач
+  const [tasks, setTasks] = useState([]);
+  // формa
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [priority, setPriority] = useState('low');
+  const [status, setStatus] = useState('new');
+  // id задачи
+  const [taskID, setTaskID] = useState(null);
+  // фильтры
+  const [search, setSearch] = useState('');
+  const [filterStatus, setFilterStatus] = useState('all');
+  const [filterPriority, setFilterPriority] = useState('all');
+  // состояние для предыдущего поиска
+  const [prevSearch, setPrevSearch] = useState('');
+  function handleSearch(value) {
+    setPrevSearch(search); 
+    setSearch(value);
+  }
+  function handleSubmit(e) {
+    e.preventDefault();
+    if (title.trim() === '') {
+      alert('название не может быть пустым');
+      return;
+    }
+    if (taskID !== null) {
+      const newTasks = tasks.map((t) =>
+        t.id === taskID
+          ? {...t, title,description,priority, status}
+          : t
+      );
+      setTasks(newTasks);
+      setTaskID(null);
+    } else {
+      const newTask = {
+        id: Date.now(),
+        title,
+        description,
+        priority,
+        status,
+      };
+      setTasks([...tasks,newTask]);
+    }
+    setTitle('');
+    setDescription('');
+    setPriority('low');
+    setStatus('new');
+    addAction();
+  }
+  function handleDelete(id) {
+    setTasks(tasks.filter((t) => t.id !== id));
+    addAction();
+  }
+  function handleEdit(task) {
+    setTaskID(task.id);
+    setTitle(task.title);
+    setDescription(task.description);
+    setPriority(task.priority);
+    setStatus(task.status);
+    addAction();
+  }
+  function handleStatusChange(id, newStatus) {
+    const newTasks = tasks.map((t) =>
+      t.id === id ? {...t,status:newStatus} : t
+    );
+    setTasks(newTasks);
+    addAction();
+  }
+  function resetFilters() {
+    setSearch('');
+    setFilterStatus('all');
+    setFilterPriority('all');
+  }
+  const filteredTasks = tasks.filter((t) => {
+    const bySearch = t.title.toLowerCase().includes(search.toLowerCase());
+    const byStatus = filterStatus === 'all' || t.status === filterStatus;
+    const byPriority = filterPriority === 'all' || t.priority === filterPriority;
+    return bySearch && byStatus && byPriority;
+  });
+  // статистика
+  const total = tasks.length;
+  const done = tasks.filter((t) => t.status === 'done').length;
+  const inProgress = tasks.filter((t) => t.status === 'in-progress').length;
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
+    <div className={theme === 'dark' ? 'app dark' : 'app'}>
+      <div className="header">
+        <h2>task-flow</h2>
         <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
+          <span>действия пользователя: {actionCount}</span>
+          <button onClick={toggleTheme}>
+            {theme === 'light' ? 'темная тема' : 'светлая тема'}
+          </button>
         </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
-
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
+      </div>
+      <form className="form" onSubmit={handleSubmit}>
+        <h3>{taskID ? 'редактировать' : 'новая задача'}</h3>
+        <input
+          type="text"
+          placeholder="название"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+        />
+        <textarea
+          placeholder="описание"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+        />
+        <div className="row">
+          <label>
+            приоритет:{' '}
+            <select value={priority} onChange={(e) => setPriority(e.target.value)}>
+              <option value="low">низкий</option>
+              <option value="medium">средний</option>
+              <option value="high">высокий</option>
+            </select>
+          </label>
+          <label>
+            статус:{' '}
+            <select value={status} onChange={(e) => setStatus(e.target.value)}>
+              <option value="new">новый</option>
+              <option value="in-progress">в процессе</option>
+              <option value="done">завершен</option>
+            </select>
+          </label>
         </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
+        <div className="row">
+          <button type="submit">{'сохранить'}</button>
+          {taskID && (
+            <button
+              type="button"
+              onClick={() => {
+                setTaskID(null);
+                setTitle('');
+                setDescription('');
+              }}
+            >
+              отменить
+            </button>
+          )}
         </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+      </form>
+      <div className="stats">
+        <div>всего: {total}</div>
+        <div>завершено: {done}</div>
+        <div>в процессе: {inProgress}</div>
+      </div>
+      <div className="filters">
+        <input
+          type="text"
+          placeholder="поиск по названию"
+          value={search}
+          onChange={(e) => handleSearch(e.target.value)}
+        />
+        <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
+          <option value="all">все статусы</option>
+          <option value="new">новый</option>
+          <option value="in-progress">в процессе</option>
+          <option value="done">завершен</option>
+        </select>
+        <select value={filterPriority} onChange={(e) => setFilterPriority(e.target.value)}>
+          <option value="all">все приоритеты</option>
+          <option value="low">низкий</option>
+          <option value="medium">средний</option>
+          <option value="high">высокий</option>
+        </select>
+        <button onClick={resetFilters}>сбросить</button>
+      </div>
+      {prevSearch && (
+        <p>предыдущий поиск: «{prevSearch}»</p>
+      )}
+      <div className="list">
+        {filteredTasks.length === 0 ? (
+          <p>задач нет</p>
+        ) : (
+          filteredTasks.map((task) => (
+            <div key={task.id} className={`task ${task.priority}`}>
+              <h3>{task.title}</h3>
+              <p>{task.description}</p>
+              <p>
+                приоритет: {task.priority === 'low' ? 'низкий' : task.priority === 'medium' ? 'средний' : 'высокий'} | статус: {task.status === 'new' ? 'новая' : task.status === 'in-progress' ? 'в процессе' : 'завершена'}
+              </p>
+              <select
+                value={task.status}
+                onChange={(e) => handleStatusChange(task.id, e.target.value)}
+              >
+                <option value="new">новая</option>
+                <option value="in-progress">в процессе</option>
+                <option value="done">завершена</option>
+              </select>
+              <button onClick={() => handleEdit(task)}>редактировать</button>
+              <button onClick={() => handleDelete(task.id)}>удалить</button>
+            </div>
+          ))
+        )}
+      </div>
+      <img src="https://images.restream-media.net/images/c6tnfvrir4sslltrm9tg.jpg" width={'630px'} height={'400px'}/>
+    </div>
+  );
 }
-
-export default App
+export default function App() {
+  return (
+    <AppProvider>
+      <TaskFlow />
+    </AppProvider>
+  );
+}
